@@ -1,0 +1,172 @@
+groups:
+  - name: redis_alerts
+    rules:
+      # Redis Instance Availability
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 0m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis instance is down"
+          description: "Redis instance {{ $labels.instance }} has been down for more than 0 minutes"
+
+      # Memory Usage Alerts
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis instance {{ $labels.instance }} memory usage is {{ $value }}%"
+
+      - alert: RedisMemoryCritical
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis memory usage is critical"
+          description: "Redis instance {{ $labels.instance }} memory usage is {{ $value }}%"
+
+      # Connection Alerts
+      - alert: RedisConnectionsHigh
+        expr: redis_connected_clients > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis connections are high"
+          description: "Redis instance {{ $labels.instance }} has {{ $value }} connected clients"
+
+      - alert: RedisRejectedConnections
+        expr: increase(redis_rejected_connections_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis rejecting connections"
+          description: "Redis instance {{ $labels.instance }} rejected {{ $value }} connections in last 5 minutes"
+
+      # Performance Alerts
+      - alert: RedisSlowQueries
+        expr: increase(redis_slowlog_length[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis slow queries detected"
+          description: "Redis instance {{ $labels.instance }} has {{ $value }} slow queries in last 5 minutes"
+
+      - alert: RedisHighLatency
+        expr: redis_command_duration_seconds_total / redis_commands_processed_total > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high latency detected"
+          description: "Redis instance {{ $labels.instance }} average command latency is {{ $value }}s"
+
+      # Key Space Alerts
+      - alert: RedisKeyEvictions
+        expr: increase(redis_evicted_keys_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis key evictions detected"
+          description: "Redis instance {{ $labels.instance }} evicted {{ $value }} keys in last 5 minutes"
+
+      - alert: RedisKeyExpired
+        expr: increase(redis_expired_keys_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+          service: redis
+        annotations:
+          summary: "High key expiration rate"
+          description: "Redis instance {{ $labels.instance }} expired {{ $value }} keys in last 5 minutes"
+
+      # Persistence Alerts
+      - alert: RedisRDBSaveFailed
+        expr: redis_rdb_last_save_timestamp_seconds < (time() - 3600)
+        for: 0m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis RDB save is outdated"
+          description: "Redis instance {{ $labels.instance }} last RDB save was more than 1 hour ago"
+
+      - alert: RedisAOFRewriteFailed
+        expr: redis_aof_last_rewrite_duration_sec > 300
+        for: 0m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis AOF rewrite taking too long"
+          description: "Redis instance {{ $labels.instance }} AOF rewrite took {{ $value }} seconds"
+
+      # CPU and Load Alerts
+      - alert: RedisCPUHigh
+        expr: redis_cpu_sys_seconds_total + redis_cpu_user_seconds_total > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis CPU usage is high"
+          description: "Redis instance {{ $labels.instance }} CPU usage is {{ $value }}%"
+
+      # Replication Alerts (for Redis Cluster/Sentinel)
+      - alert: RedisReplicationLag
+        expr: redis_connected_slaves == 0 and redis_master_repl_offset > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis master lost all slaves"
+          description: "Redis master {{ $labels.instance }} has no connected slaves"
+
+      - alert: RedisReplicationBroken
+        expr: redis_master_repl_offset - redis_slave_repl_offset > 1024*1024
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis replication lag is high"
+          description: "Redis slave {{ $labels.instance }} is lagging behind master by {{ $value }} bytes"
+
+      # Network I/O Alerts
+      - alert: RedisNetworkIOHigh
+        expr: rate(redis_net_input_bytes_total[5m]) + rate(redis_net_output_bytes_total[5m]) > 50*1024*1024
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis network I/O is high"
+          description: "Redis instance {{ $labels.instance }} network I/O is {{ $value }} bytes/sec"
+
+      # Hit Rate Alert
+      - alert: RedisLowHitRate
+        expr: (redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100 < 80
+        for: 10m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis hit rate is low"
+          description: "Redis instance {{ $labels.instance }} hit rate is {{ $value }}%"
