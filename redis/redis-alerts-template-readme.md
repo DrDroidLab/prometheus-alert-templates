@@ -167,13 +167,46 @@ kubectl apply -f redis-prometheus-rule.yaml
 
 ### Scenario 3: Kubernetes with Vanilla Prometheus Helm
 
-If you're using the vanilla Prometheus Helm chart (not the kube-prometheus-stack):
+If you're using the vanilla Prometheus Helm chart (not the kube-prometheus-stack), you need to enable Alertmanager and configure the integration:
 
-#### Option A: Values.yaml Integration
-Directly embed rules in your Helm values:
+#### Step 1: Enable Alertmanager and Configure Alert Rules
+
+Create a complete values.yaml for vanilla Prometheus:
 
 ```yaml
 # values.yaml
+# Enable Alertmanager
+alertmanager:
+  enabled: true
+  configMapOverrideName: ""
+  config:
+    global:
+      smtp_smarthost: 'localhost:587'
+    route:
+      group_by: ['alertname', 'severity']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'redis-alerts'
+    receivers:
+    - name: 'redis-alerts'
+      slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK'
+        channel: '#redis-alerts'
+        title: 'Redis Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+# Configure Prometheus to use Alertmanager
+server:
+  global:
+    scrape_interval: 15s
+  alerting:
+    alertmanagers:
+    - static_configs:
+      - targets:
+        - "prometheus-alertmanager.monitoring.svc.cluster.local:9093"
+
+# Add Redis alert rules
 serverFiles:
   redis_alerts.yml:
     groups:
@@ -189,14 +222,46 @@ serverFiles:
         annotations:
           summary: "Redis instance is down"
           description: "Redis instance {{ $labels.instance }} has been down for more than 0 minutes"
-      # ... continue with all alerts
+      
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis instance {{ $labels.instance }} memory usage is {{ $value }}%"
+      
+      # ... continue with all other alerts from redis-alerts.yml
 ```
 
-**Apply the update:**
+#### Step 2: Deploy/Upgrade Prometheus with Alertmanager
+
 ```bash
+# If first time installation
+helm install prometheus prometheus-community/prometheus \
+  -f values.yaml \
+  -n monitoring \
+  --create-namespace
+
+# If upgrading existing installation
 helm upgrade prometheus prometheus-community/prometheus \
   -f values.yaml \
   -n monitoring
+```
+
+#### Step 3: Verify Alertmanager Integration
+
+```bash
+# Check if Alertmanager is running
+kubectl get pods -n monitoring | grep alertmanager
+
+# Port forward to Alertmanager UI
+kubectl port-forward svc/prometheus-alertmanager 9093:9093 -n monitoring
+
+# Visit http://localhost:9093 to see Alertmanager UI
+```
 ```
 
 ## 🛠 Ensuring Redis Metrics Collection
