@@ -136,14 +136,3 @@ groups:
         annotations:
           summary: "Job failed (namespace: {{ $labels.namespace }}, job: {{ $labels.job_name }})"
           description: "Job {{ $labels.job_name }} has failed"
-
-      # CronJob Alerts
-      - alert: K8sCronJobSuspended
-        expr: kube_cronjob_spec_suspend == 1
-        for: 0m
-        labels:
-          severity: info
-          component: cronjob
-        annotations:
-          summary: "CronJob suspended (namespace: {{ $labels.namespace }}, cronjob: {{ $labels.cronjob }})"
-          description: "CronJob {{ $labels.cronjob }} is suspended"
