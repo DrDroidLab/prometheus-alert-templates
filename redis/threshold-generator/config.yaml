@@ -1,0 +1,9 @@
+# Configuration file for Redis Threshold Generator
+# Copy this file and modify according to your environment
+
+# prometheus url
+prometheus:
+  url: "http://localhost:xyz" # add your prometheus url here
+
+# Data collection settings
+lookback_days: 28 # Number of days to analyze (default: 4 weeks)
