@@ -20,13 +20,13 @@ groups:
       description: "PostgreSQL instance has more than 80% of connections used\n Instance: {{ $labels.instance }}\n Value: {{ $value }}"
 
   - alert: PostgresReplicationLag
-    expr: pg_stat_replication_lag_bytes > 100000000
+    expr: pg_replication_lag_seconds > 300
     for: 5m
     labels:
       severity: warning
     annotations:
       summary: "PostgreSQL replication lag detected"
-      description: "PostgreSQL replication lag is more than 100MB\n Instance: {{ $labels.instance }}\n Value: {{ $value }} bytes"
+      description: "PostgreSQL replication lag is more than 5 minutes\n Instance: {{ $labels.instance }}\n Value: {{ $value }} seconds"
 
   - alert: PostgresSlowQueries
     expr: rate(pg_stat_activity_max_tx_duration{datname!~"template.*"}[5m]) > 300
@@ -73,11 +73,20 @@ groups:
       summary: "PostgreSQL high CPU usage"
       description: "PostgreSQL CPU usage is above 80%\n Instance: {{ $labels.instance }}\n Value: {{ $value }}%"
 
-  - alert: PostgresCheckpointsTooFrequent
-    expr: rate(pg_stat_bgwriter_checkpoint_sync_time[1m]) > 30
-    for: 5m
+  - alert: PostgresBgwriterMaxwrittenCleanReached
+    expr: rate(pg_stat_bgwriter_maxwritten_clean_total[5m]) > 0
+    for: 15m
     labels:
       severity: warning
     annotations:
-      summary: "PostgreSQL checkpoints too frequent"
-      description: "PostgreSQL checkpoints are occurring too frequently\n Instance: {{ $labels.instance }}" 
+      summary: "PostgreSQL bgwriter maxwritten clean reached frequently"
+      description: "Background writer is stopping because it has written too many buffers\n Instance: {{ $labels.instance }}\n This may indicate that bgwriter_lru_maxpages is set too low."
+
+  - alert: PostgresBgwriterHighBufferAllocation
+    expr: rate(pg_stat_bgwriter_buffers_alloc_total[5m]) > rate(pg_stat_bgwriter_buffers_clean_total[5m]) * 2
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL high buffer allocation rate"
+      description: "Buffer allocation rate is more than twice the background writer clean rate\n Instance: {{ $labels.instance }}\n This may indicate bgwriter settings need tuning." 
