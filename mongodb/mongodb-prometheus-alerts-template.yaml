@@ -11,16 +11,25 @@ groups:
       description: "MongoDB instance has been down for more than 1 minute\n Instance: {{ $labels.instance }}"
 
   - alert: MongoDBReplicationLag
-    expr: mongodb_mongod_replset_member_optime_date{state="SECONDARY"} - on(set) group_right mongodb_mongod_replset_member_optime_date{state="PRIMARY"} > 60
+    expr: mongodb_ss_metrics_repl_network_getmores_totalMillis > 300000
     for: 5m
     labels:
       severity: warning
     annotations:
       summary: "MongoDB replication lag"
-      description: "MongoDB replication lag is more than 60 seconds\n Instance: {{ $labels.instance }}\n Value: {{ $value }} seconds"
+      description: "MongoDB replication is experiencing high latency\n Instance: {{ $labels.instance }}\n Value: {{ $value }}ms"
+
+  - alert: MongoDBReplicationErrors
+    expr: rate(mongodb_ss_metrics_repl_network_notPrimaryUnacknowledgedWrites[5m]) > 0 or rate(mongodb_ss_metrics_repl_syncSource_numTimesCouldNotFind[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MongoDB replication errors"
+      description: "MongoDB replication is experiencing errors\n Instance: {{ $labels.instance }}"
 
   - alert: MongoDBHighConnections
-    expr: mongodb_connections{state="current"} > mongodb_connections{state="available"} * 0.8
+    expr: mongodb_ss_connections{conn_type="current"} > (mongodb_ss_connections{conn_type="available"} * 0.8)
     for: 5m
     labels:
       severity: warning
@@ -29,31 +38,22 @@ groups:
       description: "MongoDB is using more than 80% of available connections\n Instance: {{ $labels.instance }}"
 
   - alert: MongoDBHighLatency
-    expr: rate(mongodb_op_latencies_latency_total[5m]) / rate(mongodb_op_latencies_ops_total[5m]) > 100
+    expr: rate(mongodb_ss_metrics_commands_replSetGetConfig_failed[5m]) > 0
     for: 5m
     labels:
       severity: warning
     annotations:
       summary: "MongoDB high operation latency"
-      description: "MongoDB operations are experiencing high latency\n Instance: {{ $labels.instance }}"
+      description: "MongoDB operations are experiencing failures\n Instance: {{ $labels.instance }}"
 
-  - alert: MongoDBWTCacheEvictions
-    expr: rate(mongodb_wiredtiger_cache_evicted_total[5m]) > 10
+  - alert: MongoDBReplicationBufferIssues
+    expr: mongodb_ss_metrics_repl_buffer_write_sizeBytes > mongodb_ss_metrics_repl_buffer_write_maxSizeBytes * 0.8
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: "MongoDB WiredTiger cache evictions"
-      description: "High rate of WiredTiger cache evictions\n Instance: {{ $labels.instance }}"
-
-  - alert: MongoDBPageFaults
-    expr: rate(mongodb_extra_info_page_faults_total[5m]) > 10
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      summary: "MongoDB page faults"
-      description: "High rate of page faults\n Instance: {{ $labels.instance }}"
+      summary: "MongoDB replication buffer issues"
+      description: "MongoDB replication buffer is near capacity\n Instance: {{ $labels.instance }}"
 
   - alert: MongoDBDiskSpaceCritical
     expr: (1 - (node_filesystem_avail_bytes{mountpoint=~"/.*"} / node_filesystem_size_bytes{mountpoint=~"/.*"})) * 100 > 85
@@ -73,20 +73,20 @@ groups:
       summary: "MongoDB high CPU usage"
       description: "MongoDB CPU usage is above 80%\n Instance: {{ $labels.instance }}\n Value: {{ $value }}%"
 
-  - alert: MongoDBCursorTimeout
-    expr: rate(mongodb_metrics_cursor_timed_out_total[5m]) > 0
+  - alert: MongoDBReplicationStateTransition
+    expr: rate(mongodb_ss_metrics_repl_stateTransition_totalOperationsKilled[5m]) > 0
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: "MongoDB cursor timeouts"
-      description: "MongoDB is experiencing cursor timeouts\n Instance: {{ $labels.instance }}"
+      summary: "MongoDB replication state transition issues"
+      description: "MongoDB replication state transitions are causing operation kills\n Instance: {{ $labels.instance }}"
 
-  - alert: MongoDBAssertRegular
-    expr: rate(mongodb_asserts_total{type="regular"}[5m]) > 0
+  - alert: MongoDBInitialSyncFailures
+    expr: rate(mongodb_ss_metrics_repl_initialSync_failures[5m]) > 0
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: "MongoDB regular assertions"
-      description: "MongoDB is reporting regular assertions\n Instance: {{ $labels.instance }}" 
+      summary: "MongoDB initial sync failures"
+      description: "MongoDB is experiencing initial sync failures\n Instance: {{ $labels.instance }}" 

@@ -19,14 +19,15 @@ groups:
       summary: "MySQL high thread usage"
       description: "More than 80% of MySQL connections are in running state\n Instance: {{ $labels.instance }}\n Value: {{ $value }}"
 
-  - alert: MySQLSlaveReplicationLag
-    expr: mysql_slave_status_seconds_behind_master > 300
+
+  - alert: MySQLSlaveErrors
+    expr: increase(mysql_global_variables_slave_skip_errors[5m]) > 0
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: "MySQL replication lag"
-      description: "MySQL replication lag is more than 5 minutes\n Instance: {{ $labels.instance }}\n Value: {{ $value }} seconds"
+      summary: "MySQL replication errors detected"
+      description: "MySQL replication is encountering errors\n Instance: {{ $labels.instance }}\n Value: {{ $value }} errors"
 
   - alert: MySQLInnoDBLogWaits
     expr: rate(mysql_global_status_innodb_log_waits[15m]) > 10
@@ -81,12 +82,3 @@ groups:
     annotations:
       summary: "MySQL high CPU usage"
       description: "MySQL CPU usage is above 80%\n Instance: {{ $labels.instance }}\n Value: {{ $value }}%"
-
-  - alert: MySQLBufferPoolUtilization
-    expr: mysql_global_status_buffer_pool_pages_total - mysql_global_status_buffer_pool_pages_free == mysql_global_status_buffer_pool_pages_total
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      summary: "MySQL buffer pool full"
-      description: "MySQL buffer pool is running out of free pages\n Instance: {{ $labels.instance }}" 
