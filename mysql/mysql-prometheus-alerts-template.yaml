@@ -1,0 +1,92 @@
+groups:
+- name: MySQLAlerts
+  rules:
+  - alert: MySQLInstanceDown
+    expr: mysql_up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "MySQL instance down"
+      description: "MySQL instance has been down for more than 1 minute\n Instance: {{ $labels.instance }}"
+
+  - alert: MySQLHighThreadsRunning
+    expr: mysql_global_status_threads_running > mysql_global_variables_max_connections * 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL high thread usage"
+      description: "More than 80% of MySQL connections are in running state\n Instance: {{ $labels.instance }}\n Value: {{ $value }}"
+
+  - alert: MySQLSlaveReplicationLag
+    expr: mysql_slave_status_seconds_behind_master > 300
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL replication lag"
+      description: "MySQL replication lag is more than 5 minutes\n Instance: {{ $labels.instance }}\n Value: {{ $value }} seconds"
+
+  - alert: MySQLInnoDBLogWaits
+    expr: rate(mysql_global_status_innodb_log_waits[15m]) > 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL InnoDB log waits"
+      description: "MySQL InnoDB log is waiting for disk writes\n Instance: {{ $labels.instance }}"
+
+  - alert: MySQLSlowQueries
+    expr: rate(mysql_global_status_slow_queries[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL slow queries detected"
+      description: "MySQL server is experiencing slow queries\n Instance: {{ $labels.instance }}"
+
+  - alert: MySQLHighConnectionLatency
+    expr: rate(mysql_global_status_aborted_connects[5m]) > 3
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL high connection latency"
+      description: "MySQL is experiencing connection issues\n Instance: {{ $labels.instance }}"
+
+  - alert: MySQLTableLockContention
+    expr: rate(mysql_global_status_table_locks_waited[5m]) / rate(mysql_global_status_table_locks_immediate[5m]) > 0.1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL table lock contention"
+      description: "MySQL is experiencing table lock contention\n Instance: {{ $labels.instance }}"
+
+  - alert: MySQLDiskSpaceCritical
+    expr: (1 - (node_filesystem_avail_bytes{mountpoint=~"/.*"} / node_filesystem_size_bytes{mountpoint=~"/.*"})) * 100 > 85
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "MySQL disk space critical"
+      description: "MySQL disk space usage is above 85%\n Instance: {{ $labels.instance }}\n Mount point: {{ $labels.mountpoint }}\n Value: {{ $value }}%"
+
+  - alert: MySQLHighCPUUsage
+    expr: rate(process_cpu_seconds_total{job="mysql"}[5m]) > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL high CPU usage"
+      description: "MySQL CPU usage is above 80%\n Instance: {{ $labels.instance }}\n Value: {{ $value }}%"
+
+  - alert: MySQLBufferPoolUtilization
+    expr: mysql_global_status_buffer_pool_pages_total - mysql_global_status_buffer_pool_pages_free == mysql_global_status_buffer_pool_pages_total
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL buffer pool full"
+      description: "MySQL buffer pool is running out of free pages\n Instance: {{ $labels.instance }}" 

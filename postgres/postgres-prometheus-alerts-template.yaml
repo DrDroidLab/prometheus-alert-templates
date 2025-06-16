@@ -1,0 +1,83 @@
+groups:
+- name: PostgresAlerts
+  rules:
+  - alert: PostgresInstanceDown
+    expr: pg_up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "PostgreSQL instance down"
+      description: "PostgreSQL instance has been down for more than 1 minute\n Instance: {{ $labels.instance }}"
+
+  - alert: PostgresHighConnections
+    expr: sum by (instance) (pg_stat_activity_count) > (pg_settings_max_connections * 0.8)
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High number of PostgreSQL connections"
+      description: "PostgreSQL instance has more than 80% of connections used\n Instance: {{ $labels.instance }}\n Value: {{ $value }}"
+
+  - alert: PostgresReplicationLag
+    expr: pg_stat_replication_lag_bytes > 100000000
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL replication lag detected"
+      description: "PostgreSQL replication lag is more than 100MB\n Instance: {{ $labels.instance }}\n Value: {{ $value }} bytes"
+
+  - alert: PostgresSlowQueries
+    expr: rate(pg_stat_activity_max_tx_duration{datname!~"template.*"}[5m]) > 300
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL slow queries detected"
+      description: "PostgreSQL queries taking more than 5 minutes\n Instance: {{ $labels.instance }}\n Database: {{ $labels.datname }}"
+
+  - alert: PostgresDeadlocks
+    expr: rate(pg_stat_database_deadlocks{datname!~"template.*"}[5m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL deadlocks detected"
+      description: "PostgreSQL has deadlocks\n Instance: {{ $labels.instance }}\n Database: {{ $labels.datname }}"
+
+  - alert: PostgresHighRollbacks
+    expr: rate(pg_stat_database_xact_rollback{datname!~"template.*"}[5m]) / rate(pg_stat_database_xact_commit{datname!~"template.*"}[5m]) > 0.02
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL high rollback rate"
+      description: "High rate of transaction rollbacks (>2%)\n Instance: {{ $labels.instance }}\n Database: {{ $labels.datname }}"
+
+  - alert: PostgresDiskSpaceCritical
+    expr: (1 - (node_filesystem_avail_bytes{mountpoint=~"/.*"} / node_filesystem_size_bytes{mountpoint=~"/.*"})) * 100 > 85
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "PostgreSQL disk space critical"
+      description: "PostgreSQL disk space usage is above 85%\n Instance: {{ $labels.instance }}\n Mount point: {{ $labels.mountpoint }}\n Value: {{ $value }}%"
+
+  - alert: PostgresHighCPUUsage
+    expr: rate(process_cpu_seconds_total{job="postgresql"}[5m]) > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL high CPU usage"
+      description: "PostgreSQL CPU usage is above 80%\n Instance: {{ $labels.instance }}\n Value: {{ $value }}%"
+
+  - alert: PostgresCheckpointsTooFrequent
+    expr: rate(pg_stat_bgwriter_checkpoint_sync_time[1m]) > 30
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "PostgreSQL checkpoints too frequent"
+      description: "PostgreSQL checkpoints are occurring too frequently\n Instance: {{ $labels.instance }}" 
