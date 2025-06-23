@@ -1,0 +1,94 @@
+groups:
+- name: clickhouse.rules
+  rules:
+  # Critical alerts
+  - alert: ClickHouseDown
+    expr: up{job=~".*clickhouse.*"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "ClickHouse down"
+      description: "ClickHouse instance {{ $labels.instance }} is down"
+
+  - alert: ClickHouseRejectedConnections
+    expr: sum(rate(ClickHouseAsyncMetrics_TCPRejectedConnections[5m]) + rate(ClickHouseAsyncMetrics_HTTPRejectedConnections[5m])) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "ClickHouse rejecting connections"
+      description: "ClickHouse is rejecting TCP/HTTP connections on {{ $labels.instance }}"
+
+  - alert: ClickHouseMemoryLimitExceeded
+    expr: increase(ClickHouseProfileEvents_QueryMemoryLimitExceeded[5m]) > 0
+    for: 0m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Memory limit exceeded"
+      description: "Queries are hitting memory limits on {{ $labels.instance }}"
+
+  # Warning alerts
+  - alert: ClickHouseHighMemoryUsage
+    expr: ClickHouseAsyncMetrics_MemoryResident / ClickHouseAsyncMetrics_OSMemoryTotal * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory usage"
+      description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - alert: ClickHouseSlowQueries
+    expr: rate(ClickHouseProfileEvents_QueryTimeMicroseconds[5m]) > 1000000
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Slow queries detected"
+      description: "Queries taking more than 1s on {{ $labels.instance }}"
+
+  - alert: ClickHouseHighCPUUsage
+    expr: rate(ClickHouseProfileEvents_UserTimeMicroseconds[5m]) > 0.8 * 1000000
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage is high on {{ $labels.instance }}"
+
+  - alert: ClickHouseDistributedSyncInsertErrors
+    expr: rate(ClickHouseProfileEvents_DistributedConnectionSkipReadOnlyReplica[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Distributed sync insert errors"
+      description: "Read-only replicas being skipped during distributed inserts on {{ $labels.instance }}"
+
+  - alert: ClickHouseReadOnlyReplicas
+    expr: ClickHouseMetrics_ReadonlyReplica > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Read-only replicas detected"
+      description: "{{ $value }} replicated tables in read-only state on {{ $labels.instance }}"
+
+  - alert: ClickHouseBackgroundTasksOverload
+    expr: (ClickHouseMetrics_BackgroundSchedulePoolTask / ClickHouseMetrics_BackgroundSchedulePoolSize * 100 > 80) or (ClickHouseMetrics_BackgroundMergesAndMutationsPoolTask / ClickHouseMetrics_BackgroundMergesAndMutationsPoolSize * 100 > 80)
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High background tasks load"
+      description: "Background processing pools are heavily loaded on {{ $labels.instance }}"
+
+  - alert: ClickHouseDelayedInserts
+    expr: ClickHouseMetrics_DelayedInserts > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Delayed inserts detected"
+      description: "{{ $value }} delayed inserts on {{ $labels.instance }}"
