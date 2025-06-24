@@ -1,0 +1,94 @@
+groups:
+- name: opensearch.rules
+  rules:
+  # Critical alerts
+  - alert: OpenSearchDown
+    expr: up{job=~".*opensearch.*"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "OpenSearch down"
+      description: "OpenSearch instance {{ $labels.instance }} is down"
+
+  - alert: OpenSearchClusterRed
+    expr: opensearch_cluster_status == 2
+    for: 0m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Cluster status red"
+      description: "OpenSearch cluster is in RED state"
+
+  - alert: OpenSearchUnassignedShards
+    expr: opensearch_cluster_shards_active_percent < 100
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Unassigned shards"
+      description: "Only {{ $value }}% shards active in the cluster"
+
+  # Warning alerts
+  - alert: OpenSearchHighHeapUsage
+    expr: opensearch_jvm_mem_heap_used_percent > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High heap usage"
+      description: "JVM heap usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - alert: OpenSearchHighCPUUsage
+    expr: opensearch_os_cpu_percent > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - alert: OpenSearchHighDiskUsage
+    expr: (1 - (opensearch_fs_path_available_bytes / opensearch_fs_path_total_bytes)) * 100 > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High disk usage"
+      description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - alert: OpenSearchHighFieldDataEvictions
+    expr: rate(opensearch_indices_fielddata_evictions_count[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High fielddata evictions"
+      description: "Fielddata eviction rate is {{ $value }}/s on {{ $labels.instance }}"
+
+  - alert: OpenSearchHighQueryLatency
+    expr: rate(opensearch_indices_search_query_time_seconds[5m]) / rate(opensearch_indices_search_query_count[5m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High query latency"
+      description: "Average query latency is {{ $value }}s on {{ $labels.instance }}"
+
+  - alert: OpenSearchHighIndexingLatency
+    expr: rate(opensearch_indices_indexing_index_time_seconds[5m]) / rate(opensearch_indices_indexing_index_count[5m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High indexing latency"
+      description: "Average indexing latency is {{ $value }}s on {{ $labels.instance }}"
+
+  - alert: OpenSearchClusterYellow
+    expr: opensearch_cluster_status == 1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Cluster status yellow"
+      description: "OpenSearch cluster is in YELLOW state"
