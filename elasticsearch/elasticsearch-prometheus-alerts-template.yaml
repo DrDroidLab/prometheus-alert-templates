@@ -1,0 +1,94 @@
+groups:
+- name: elasticsearch.rules
+  rules:
+  # Critical alerts
+  - alert: ElasticsearchDown
+    expr: up{job=~".*elasticsearch.*"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Elasticsearch down"
+      description: "Elasticsearch instance {{ $labels.instance }} is down"
+
+  - alert: ElasticsearchClusterRed
+    expr: elasticsearch_cluster_health_status{color="red"} > 0
+    for: 0m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Cluster status red"
+      description: "Elasticsearch cluster is in RED state"
+
+  - alert: ElasticsearchUnassignedShards
+    expr: elasticsearch_cluster_health_unassigned_shards > 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Unassigned shards"
+      description: "{{ $value }} unassigned shards in the cluster"
+
+  # Warning alerts
+  - alert: ElasticsearchHighHeapUsage
+    expr: (elasticsearch_jvm_memory_used_bytes{area="heap"} / elasticsearch_jvm_memory_max_bytes{area="heap"}) * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High heap usage"
+      description: "JVM heap usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - alert: ElasticsearchHighCPUUsage
+    expr: rate(elasticsearch_process_cpu_percent[5m]) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - alert: ElasticsearchHighDiskUsage
+    expr: elasticsearch_filesystem_data_available_bytes / elasticsearch_filesystem_data_size_bytes * 100 < 20
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High disk usage"
+      description: "Only {{ $value }}% disk space left on {{ $labels.instance }}"
+
+  - alert: ElasticsearchHighFieldDataCache
+    expr: elasticsearch_indices_fielddata_memory_size_bytes > 1000000000
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High fielddata cache"
+      description: "Fielddata cache size is {{ $value | humanizeBytes }} on {{ $labels.instance }}"
+
+  - alert: ElasticsearchHighSearchLatency
+    expr: rate(elasticsearch_indices_search_query_time_seconds[5m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High search latency"
+      description: "Search latency is {{ $value }}s on {{ $labels.instance }}"
+
+  - alert: ElasticsearchHighIndexingLatency
+    expr: rate(elasticsearch_indices_indexing_index_time_seconds_total[5m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High indexing latency"
+      description: "Indexing latency is {{ $value }}s on {{ $labels.instance }}"
+
+  - alert: ElasticsearchClusterYellow
+    expr: elasticsearch_cluster_health_status{color="yellow"} > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Cluster status yellow"
+      description: "Elasticsearch cluster is in YELLOW state"
