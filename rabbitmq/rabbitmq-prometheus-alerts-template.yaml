@@ -1,0 +1,150 @@
+groups:
+  - name: rabbitmq_alerts
+    rules:
+      # Node Availability & Resource Alarms
+      - alert: RabbitMQFileDescriptorAlarm
+        expr: rabbitmq_alarms_file_descriptor_limit > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ file descriptor limit alarm"
+          description: "RabbitMQ node {{ $labels.instance }} has triggered the file descriptor limit alarm."
+
+      - alert: RabbitMQDiskSpaceAlarm
+        expr: rabbitmq_alarms_free_disk_space_watermark > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ disk space alarm"
+          description: "RabbitMQ node {{ $labels.instance }} has triggered the disk space watermark alarm."
+
+      - alert: RabbitMQMemoryAlarm
+        expr: rabbitmq_alarms_memory_used_watermark > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ memory alarm"
+          description: "RabbitMQ node {{ $labels.instance }} has triggered the memory watermark alarm."
+
+      - alert: RabbitMQHighMemoryUsage
+        expr: (rabbitmq_process_resident_memory_bytes / (rabbitmq_process_resident_memory_bytes + rabbitmq_disk_space_available_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high memory usage"
+          description: "RabbitMQ node {{ $labels.instance }} is using more than 80% of its available memory."
+
+      - alert: RabbitMQLowDiskSpace
+        expr: rabbitmq_disk_space_available_bytes < 10737418240
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ low disk space"
+          description: "RabbitMQ node {{ $labels.instance }} has less than 10GB of free disk space."
+
+      # Resource Usage
+      - alert: RabbitMQHighFileDescriptorUsage
+        expr: (rabbitmq_process_open_fds / rabbitmq_process_max_fds) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high file descriptor usage"
+          description: "RabbitMQ node {{ $labels.instance }} is using more than 80% of available file descriptors."
+
+      - alert: RabbitMQHighSocketUsage
+        expr: (rabbitmq_process_open_tcp_sockets / rabbitmq_process_max_tcp_sockets) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high socket usage"
+          description: "RabbitMQ node {{ $labels.instance }} is using more than 80% of available TCP sockets."
+
+      # Process Health
+      - alert: RabbitMQHighErlangProcessUsage
+        expr: rabbitmq_erlang_processes_used > 950000
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high Erlang process usage"
+          description: "RabbitMQ node {{ $labels.instance }} is using a high number of Erlang processes."
+
+      # Connection and Channel Churn
+      - alert: RabbitMQHighConnectionChurn
+        expr: rate(rabbitmq_connections_opened_total[5m]) + rate(rabbitmq_connections_closed_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high connection churn"
+          description: "RabbitMQ node {{ $labels.instance }} is experiencing a high rate of connection churn."
+
+      - alert: RabbitMQHighChannelChurn
+        expr: rate(rabbitmq_channels_opened_total[5m]) + rate(rabbitmq_channels_closed_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high channel churn"
+          description: "RabbitMQ node {{ $labels.instance }} is experiencing a high rate of channel churn."
+
+      # Queue Churn
+      - alert: RabbitMQHighQueueChurn
+        expr: rate(rabbitmq_queues_created_total[5m]) + rate(rabbitmq_queues_deleted_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ high queue churn"
+          description: "RabbitMQ node {{ $labels.instance }} is experiencing a high rate of queue creation/deletion."
+
+      # Basic Metrics
+      - alert: RabbitMQNoConsumers
+        expr: rabbitmq_consumers == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ has no consumers"
+          description: "RabbitMQ cluster {{ $labels.cluster }} has no active consumers for the last 15 minutes."
+
+      # Queue Health
+      - alert: RabbitMQQueueHigh
+        expr: rabbitmq_queue_messages_ready > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ queue has too many messages"
+          description: "Queue '{{ $labels.queue }}' on node '{{ $labels.instance }}' has more than 1000 ready messages. Consumers may not be keeping up."
+
+      - alert: RabbitMQNoConsumer
+        expr: rabbitmq_queue_consumers == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ queue has no consumers"
+          description: "Queue '{{ $labels.queue }}' on node '{{ $labels.instance }}' has had no consumers for 15 minutes."
+ 
