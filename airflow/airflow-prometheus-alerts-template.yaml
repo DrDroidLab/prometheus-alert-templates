@@ -1,0 +1,88 @@
+groups:
+  - name: Airflow
+    rules:
+      # Scheduler Health
+      - alert: AirflowSchedulerDown
+        expr: airflow_scheduler_heartbeat < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Airflow scheduler is down"
+          description: "The Airflow scheduler has not sent a heartbeat in the last minute"
+
+      - alert: AirflowSchedulerLoopDelay
+        expr: rate(airflow_scheduler_scheduler_loop_duration_sum[5m]) / rate(airflow_scheduler_scheduler_loop_duration_count[5m]) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scheduler loop taking too long"
+          description: "Scheduler loop duration is averaging over 30 seconds"
+
+      # Task Execution
+      - alert: AirflowNoExecutorSlots
+        expr: airflow_executor_open_slots == 0 and airflow_executor_queued_tasks > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No available executor slots"
+          description: "All executor slots are in use and tasks are queued"
+
+      - alert: AirflowHighQueuedTasks
+        expr: airflow_executor_queued_tasks > airflow_executor_running_tasks * 2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of queued tasks"
+          description: "Number of queued tasks is more than twice the number of running tasks"
+
+      # Resource Utilization
+      - alert: AirflowTasksStarving
+        expr: airflow_scheduler_tasks_starving > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tasks are starving for resources"
+          description: "{{ $value }} tasks cannot be scheduled due to resource constraints"
+
+      - alert: AirflowPoolSaturation
+        expr: sum(airflow_pool_running_slots) by (pool_name) >= sum(airflow_pool_open_slots + airflow_pool_running_slots) by (pool_name)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pool reaching capacity"
+          description: "Pool {{ $labels.pool_name }} is running at full capacity"
+
+      # DAG Processing
+      - alert: AirflowDagProcessingQueueGrowing
+        expr: rate(airflow_dag_processing_file_path_queue_size[15m]) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DAG processing queue is growing"
+          description: "The queue of DAG files to process is continuously growing"
+
+      - alert: AirflowDagImportErrors
+        expr: increase(airflow_dag_processing_import_errors[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DAG import errors detected"
+          description: "Errors occurred while importing DAG files"
+
+      # Performance
+      - alert: AirflowCriticalSectionDuration
+        expr: rate(airflow_scheduler_critical_section_duration_sum[5m]) / rate(airflow_scheduler_critical_section_duration_count[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Critical section duration too high"
+          description: "Scheduler critical section operations are taking longer than 10 seconds on average" 
