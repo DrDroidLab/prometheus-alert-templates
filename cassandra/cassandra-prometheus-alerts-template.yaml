@@ -1,0 +1,122 @@
+groups:
+- name: cassandra.rules
+  rules:
+  # Critical alerts
+  - alert: CassandraDown
+    expr: up{job=~".*cassandra.*"} == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Cassandra down"
+      description: "Cassandra instance {{ $labels.instance }} is down"
+
+  - alert: CassandraHighHeapUsage
+    expr: jvm_memory_bytes_used{area="heap"} / jvm_memory_bytes_max{area="heap"} * 100 > 90
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High heap usage"
+      description: "Cassandra heap usage is {{ $value | printf `%.2f` }}% on {{ $labels.instance }}"
+
+  - alert: CassandraReadUnavailable
+    expr: increase(cassandra_clientrequest_scope_read_unavailables[5m]) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Cassandra Read Unavailable"
+      description: "Cassandra node {{ $labels.instance }} has unavailable read requests."
+
+  - alert: CassandraDeadlockedThreads
+    expr: jvm_threads_deadlocked > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Cassandra Deadlocked Threads"
+      description: "Cassandra instance {{ $labels.instance }} has deadlocked threads."
+
+  # Warning alerts
+  - alert: CassandraHighPendingCompactions
+    expr: sum(cassandra_compaction_pendingtasks) by (instance) > 30
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High pending compactions"
+      description: "{{ $value }} pending compactions on {{ $labels.instance }}"
+
+  - alert: CassandraDroppedMessages
+    expr: sum(increase(cassandra_droppedmessage_dropped{}[5m])) by (instance, scope) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Dropped messages"
+      description: "Messages of type {{ $labels.scope }} are being dropped on {{ $labels.instance }}"
+
+  - alert: CassandraHighDiskUsage
+    # This alert requires node_exporter to be running on the Cassandra nodes.
+    expr: (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High disk usage"
+      description: "Disk usage is {{ $value | printf `%.2f` }}% on {{ $labels.instance }}"
+
+  - alert: CassandraThreadPoolBlocked
+    expr: sum by (instance) ({__name__=~"cassandra_threadpools_.*_totalblockedtasks"}) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Thread pool blocked"
+      description: "One or more thread pools on {{ $labels.instance }} have blocked tasks."
+
+  - alert: CassandraLowKeyCacheHitRate
+    expr: avg by (instance) (cassandra_cache_hitrate{scope="KeyCache"} or on(instance) vector(1)) < 0.9
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Low key cache hit rate"
+      description: "Key cache hit rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+  - alert: CassandraHighGCTime
+    expr: rate(jvm_gc_collection_seconds_sum[5m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High GC Time"
+      description: "Cassandra instance {{ $labels.instance }} is spending more than 50% of time in GC."
+
+  - alert: CassandraHighTombstoneScanRate
+    expr: sum(rate(cassandra_table_tombstonescannedhistogram[5m])) by (instance) > 100
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High Tombstone Scan Rate"
+      description: "Cassandra instance {{ $labels.instance }} is scanning tombstones at a high rate."
+
+  - alert: CassandraCommitLogWaiting
+    expr: cassandra_commitlog_waitingonsegmentallocation > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Cassandra Commit Log Contention"
+      description: "Cassandra instance {{ $labels.instance }} is experiencing commit log allocation contention."
+
+  - alert: CassandraTombstoneReadAborts
+    expr: increase(cassandra_clientrequest_scope_read_quorum_tombstoneaborts[5m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tombstone Read Aborts"
+      description: "Read requests are being aborted due to tombstones on {{ $labels.instance }}."
