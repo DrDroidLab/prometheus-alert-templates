@@ -1,0 +1,74 @@
+groups:
+  - name: kafka.rules
+    rules:
+      # Critical alerts
+      - alert: KafkaBrokerDown
+        expr: up{job=~".*kafka.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka broker down"
+          description: "Kafka instance {{ $labels.instance }} is down."
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_server_under_replicated_partitions > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka under-replicated partitions"
+          description: "Kafka is running with {{ $value }} under-replicated partitions on {{ $labels.instance }}."
+
+      - alert: KafkaOfflinePartitions
+        expr: kafka_controller_offline_partitions_count > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka offline partitions"
+          description: "Kafka has {{ $value }} offline partitions on {{ $labels.instance }}."
+
+      - alert: KafkaNoActiveController
+        expr: sum(kafka_controller_active_controller_count) == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "No active Kafka controller"
+          description: "There is no active Kafka controller in the cluster."
+
+      # Warning alerts
+      - alert: KafkaHighRequestLatency
+        expr: (sum(rate(kafka_network_total_time_ms_total[5m])) by (instance, request) / sum(rate(kafka_network_request[5m])) by (instance, request)) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High average request latency"
+          description: "Average request latency is over 1s for {{ $labels.request }} requests on {{ $labels.instance }}."
+
+      - alert: KafkaHighFailedProduceRequests
+        expr: sum(rate(kafka_server_failed_produce_requests_per_sec[5m])) by (instance) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High number of failed produce requests"
+          description: "There are more than 10 failed produce requests per second on {{ $labels.instance }}."
+
+      - alert: KafkaHighFailedFetchRequests
+        expr: sum(rate(kafka_server_failed_fetch_requests_per_sec[5m])) by (instance) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High number of failed fetch requests"
+          description: "There are more than 10 failed fetch requests per second on {{ $labels.instance }}." 

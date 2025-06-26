@@ -8,6 +8,7 @@ This repository contains a collection of Prometheus alert templates for various 
 - [Redis](./redis/): Alerts for Redis monitoring
 - [PostgreSQL](./postgres/): Alerts for PostgreSQL database monitoring
 - [MySQL](./mysql/): Alerts for MySQL database monitoring
+- [Cassandra](./cassandra/): Alerts for Cassandra database monitoring (via JMX exporter)
 - [MongoDB](./mongodb/): Alerts for MongoDB monitoring
 - [Supabase](./supabase/): Alerts for Supabase platform monitoring
 
@@ -327,4 +328,4 @@ curl http://localhost:9090/api/v1/rules
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
